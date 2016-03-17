@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from keras.models import Graph, Sequential
-from keras.layers import Dense, Dropout, LSTM, TimeDistributedDense
+from keras.models import Sequential
+from keras.layers import Merge, LSTM, Dense
 from keras.models import model_from_json
 from str2vec import *
 
@@ -79,7 +79,9 @@ class CombinedAnalysis(object):
         self.fundamental_model = model_from_json(open(self.fundamental_model_file+'.json').read())
         self.fundamental_model.load_weights(self.fundamental_model_file+'.weights.h5')
         self.fundamental_model_weights = self.fundamental_model.get_weights()
+
         # TODO: building graph model
+        self.model = Sequential()
 
     def technicalAnalysisSingleNews(self, news):
         """
@@ -103,6 +105,22 @@ class CombinedAnalysis(object):
         TODO: a tough one
         :return:
         """
+        model1 = Sequential()
+        model1.add(LSTM(50, input_dim=5, return_sequences=True))
+        model1.add(LSTM(50, input_dim=50, return_sequences=True))
+        model1.set_weights(self.index_model.get_weights())
+
+        model2 = Sequential()
+        model2.add(LSTM(100, input_dim=100, activation='tanh', inner_activation='sigmoid'))
+        model2.set_weights(self.fundamental_model_weights)
+
+        self.model.add(Merge([model1, self.model2],
+                       mode='concat', concat_axis=-1))
+        self.model.add(Dense(200, input_dim=150, activation='tanh'))
+        self.model.add(Dense(1, input_dim=200, activation='linear'))
+
+        print self.model.summary()
+
 
 if __name__ == '__main__':
     ca = CombinedAnalysis()
@@ -112,3 +130,4 @@ if __name__ == '__main__':
     print ca.technicalAnalysisSingleNews("深港通力争今年开通 创业板股票将纳入标的")
     print ca.technicalAnalysisSingleNews("首家自贸区合资券商申港证券获批 证券行业对外开放提速")
     print ca.technicalAnalysisSingleNews("平安称陆金所下半年启动上市 不受战新板不确定性影响")
+    ca.buildCombinedModels()
