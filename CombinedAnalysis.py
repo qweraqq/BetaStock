@@ -98,6 +98,11 @@ class CombinedAnalysis(object):
         news_deep_rep = np.tanh(np.dot(news_representation, Wxc) + bc)
         return np.dot(news_deep_rep, W)+b
 
+    def buildCombinedModels(self):
+        """
+        TODO: a tough one
+        :return:
+        """
 
 if __name__ == '__main__':
     ca = CombinedAnalysis()
@@ -105,3 +110,5 @@ if __name__ == '__main__':
     print ca.technicalAnalysisSingleNews("财经观察：全球经济风险致美联储暂缓加息")
     print ca.technicalAnalysisSingleNews("中石油再遭低油价重击 大庆油田前两个月亏损超50亿")
     print ca.technicalAnalysisSingleNews("深港通力争今年开通 创业板股票将纳入标的")
+    print ca.technicalAnalysisSingleNews("首家自贸区合资券商申港证券获批 证券行业对外开放提速")
+    print ca.technicalAnalysisSingleNews("平安称陆金所下半年启动上市 不受战新板不确定性影响")
