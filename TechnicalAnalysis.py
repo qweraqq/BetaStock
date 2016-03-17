@@ -34,7 +34,9 @@ def readStockFile(filename, mode=0):
 
         X[:, 3] = np.copy(X[:, 4])
         X[:, 4] = np.copy(tmp)
-        X[:, 4] = X[:, 4] / 10000000
+        X[:, 4] = X[:, 4] * 100
+        X[:, 4] = X[:, 4] / 320000000000
+
     X[:, 3] = X[:, 3]/100
     last_day_close_rev = 1/(1+X[:, 3])
     last_day_close_rev = last_day_close_rev.reshape((len(last_day_close_rev),1))
@@ -117,7 +119,7 @@ if __name__ == '__main__':
     model.add(Dropout(0.2))
     model.add(TimeDistributedDense(nb_classes, input_dim=nb_hidden, activation='linear'))
 
-    earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=20, verbose=0, mode='auto')
+    earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, verbose=0, mode='auto')
     model.compile(loss='mean_squared_error', optimizer='rmsprop')  # rmsprop
     model.fit(X, y, batch_size=500, nb_epoch=500, validation_split=0.2, callbacks=[earlyStopping], shuffle=True)
 

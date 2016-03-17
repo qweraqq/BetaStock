@@ -28,7 +28,7 @@ def custom_objective(y_true, y_pred):
     T.abs_(y1-y)
     # (y1-y)**2
     # (weight_matrix)
-    return T.mean(0.5*T.abs_(y)*(y1-y)**2 +weight_matrix*T.abs_(y)*(y1-y)**2)
+    return T.mean(0.5*(y1-y)**2)
 
 
 if __name__ == '__main__':
@@ -52,15 +52,15 @@ if __name__ == '__main__':
     X_val, y_val = readStockFile('val.csv', mode=1)
     earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss',
                                                 patience=10, verbose=0, mode='auto')
-    model.fit(X_train, y_train, batch_size=1, nb_epoch=100, 
+    model.fit(X_train, y_train, batch_size=1, nb_epoch=100,
               validation_data=(X_val,y_val))#, callbacks=[earlyStopping])
-
-    X_test, y_test= readStockFile('test.csv', mode=1)
+    # model.load_weights('/home/shen/PycharmProjects/BetaStock/ta.model.weights.h5')
+    X_test, y_test = readStockFile('test.csv', mode=1)
 
     y_predict = model.predict(X_test,  batch_size=1)
     for i in range(np.shape(y_test)[1]):
         if i>20:
-            print y_test[0, i, 0], y_predict[0,i,0]
+            print y_test[0, i, 0], y_predict[0, i, 0]
 
     bin_result = (y_test*y_predict > 0)
     print np.bincount(bin_result[0, 20:, 0])
