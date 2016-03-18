@@ -127,6 +127,7 @@ class CombinedAnalysis(object):
 
         print self.model.summary()
 
+
     # def buildCombinedGraphModels(self):
     #     """
     #     TODO: a tough one
