@@ -6,6 +6,7 @@ import re
 import tushare as ts
 from str2vec import *
 from keras.preprocessing import sequence
+from datetime import datetime, date, time, timedelta
 
 import logging
 # logging.basicConfig(level=logging.CRITICAL)
@@ -87,15 +88,51 @@ class Preprocessor(object):
         r_tmp = sequence.pad_sequences(r_tmp, maxlen=max_len, dtype='float32')
         return r_tmp
 
+    def getPreviousStockData(self, dt=None, td=200, max_len=200):
+        """
+        :param dt: date time of the news
+        :param td: time delta, number days to backtrack, default 200
+        :param max_len: padding parameters, default 200
+        :return:
+        """
+        if dt == None:
+            dt = datetime.today()
+        dt2 = dt - timedelta(days=td)
+        logger.info(self.formatDateString(dt2))
+        stock_data = ts.get_hist_data('sh', start=self.formatDateString(dt2),
+                                      end=self.formatDateString(dt))
+
+        stock_data = stock_data.as_matrix(['open', 'high', 'low', 'p_change', 'volume'])
+        stock_data = stock_data[stock_data.shape[0]::-1, :]
+        return stock_data
+
+    def formatDateString(self, dt):
+        """
+        :param dt:
+        :return:
+        """
+        rvalue = ""
+        rvalue += str(dt.year)
+        rvalue += "-"
+        if dt.month < 10:
+            rvalue += "0"
+        rvalue += str(dt.month)
+        rvalue += "-"
+        if dt.day < 10:
+            rvalue += "0"
+        rvalue += str(dt.day)
+        return rvalue
 
 if __name__ == '__main__':
     p = Preprocessor()
-    news_rep1 = p.convertOneNewsToVec("平安称陆金所下半年启动上市 不受战新板不确定性影响")
-    news_rep2 = p.convertOneNewsToVec("财经观察：全球经济风险致美联储暂缓加息")
-
-    print news_rep1[0:5]
-    print news_rep2[0:5]
-
-    news_rep_list = np.vstack((news_rep1, news_rep2))
-    print p.convertOneDayAllNewsToVec(news_rep_list)
-    print p.convertOneDayAllNewsToVec(news_rep_list).shape
+    # news_rep1 = p.convertOneNewsToVec("平安称陆金所下半年启动上市 不受战新板不确定性影响")
+    # news_rep2 = p.convertOneNewsToVec("财经观察：全球经济风险致美联储暂缓加息")
+    #
+    # print news_rep1[0:5]
+    # print news_rep2[0:5]
+    #
+    # news_rep_list = np.vstack((news_rep1, news_rep2))
+    # print p.convertOneDayAllNewsToVec(news_rep_list)
+    # print p.convertOneDayAllNewsToVec(news_rep_list).shape
+    m = p.getPreviousStockData(td=2)
+    print m
