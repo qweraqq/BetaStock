@@ -132,7 +132,7 @@ class Preprocessor(object):
         stock_data = stock_data.as_matrix(['open', 'high', 'low', 'p_change', 'volume', 'close'])
         stock_data = stock_data[stock_data.shape[0]::-1, :]
         stock_data = featureNormalization(stock_data, mode=1)
-        stock_data = stock_data[np.newaxis, :, :]
+        #
         return stock_data
 
     def getNextDayStockPchange(self, dt=None, max_td=7):
@@ -213,7 +213,14 @@ class Preprocessor(object):
                         # second, r_stock
                         tmp = self.getPreviousStockData(dt=base_time-timedelta(days=1),
                                                         td=300)
+                        tmp = tmp[np.newaxis, :, :]
+                        tmp = sequence.pad_sequences(tmp, maxlen=max_len+100,
+                                                     dtype='float32')
 
+                        if r_stock is None:
+                            r_stock = tmp
+                        else:
+                            r_stock = np.vstack((r_stock, tmp))
 
                         # third, r_pchange
                         if return_pchange:
@@ -240,11 +247,18 @@ class Preprocessor(object):
             tmp = self.convertOneDayAllNewsToVec(one_day_news,
                                                  max_len=max_len)
             r_news = np.vstack((r_news, tmp))
+            tmp = self.getPreviousStockData(dt=base_time-timedelta(days=1),
+                                            td=300)
+            tmp = tmp[np.newaxis, :, :]
+            tmp = sequence.pad_sequences(tmp, maxlen=max_len+100,
+                                         dtype='float32')
+            r_stock = np.vstack((r_stock, tmp))
+
             if return_pchange:
                 p_change = self.getNextDayStockPchange(base_time-timedelta(days=1))
                 r_pchange = np.vstack((r_pchange, [[p_change]]))
 
-        return r_news, r_pchange
+        return r_news, r_stock, r_pchange
 
     def getStockDate(self, dt):
         """
@@ -269,7 +283,8 @@ if __name__ == '__main__':
     # print p.convertOneDayAllNewsToVec(news_rep_list)
     # print p.convertOneDayAllNewsToVec(news_rep_list).shape
     m = p.getPreviousStockData(td=3)
-    print m
-    X,y = p.readNewsFromFile('201501news.txt', max_len=3)
-    # print X
-    #print y
+    #print m
+    X1,X2,y = p.readNewsFromFile('201501news.txt', max_len=3)
+    print X1
+    print X2[:,99:,:]
+    print y
