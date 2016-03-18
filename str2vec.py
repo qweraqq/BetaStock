@@ -97,11 +97,11 @@ def tokenize_sentence(line, W_norm, vocab, tmp_lambda=0.6):
     vector_dim = W_norm.shape[1]
     rvalue = np.zeros((1,vector_dim))
     sen = list(jieba.cut(line))
-    for j,w in enumerate(sen):
-        w=w.encode('utf-8')
-        if vocab.has_key(w)==False:
-            if j>=1:
-                rvalue=np.vstack((rvalue, Wj_1))
+    for j, w in enumerate(sen):
+        w = w.encode('utf-8')
+        if vocab.has_key(w) == False:
+            if j >= 1:
+                rvalue = np.vstack((rvalue, Wj_1))
             Wj_1 = np.zeros((1, vector_dim))  # word 'unk'=[0]
             continue
 
