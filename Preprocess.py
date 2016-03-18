@@ -106,6 +106,24 @@ class Preprocessor(object):
         stock_data = stock_data[stock_data.shape[0]::-1, :]
         return stock_data
 
+    def getPreviousStockData(self, dt=None, max_td=7):
+        """
+        :param dt:
+        :param max_td:
+        :return:
+        """
+        if dt == None:
+            return None
+        dt1 = dt + timedelta(1)
+        dt2 = dt + timedelta(max_td)
+
+        stock_data = ts.get_hist_data('sh', start=self.formatDateString(dt1),
+                                      end=self.formatDateString(dt2))
+        if stock_data.empty:
+            return None
+        return stock_data.as_matrix(['p_change'])[-1]
+
+
     def formatDateString(self, dt):
         """
         :param dt:
