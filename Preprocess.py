@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import re
 import tushare as ts
+from pip.utils.ui import hidden_cursor
+
 from str2vec import *
 from keras.preprocessing import sequence
 from datetime import datetime, date, time, timedelta
@@ -71,10 +73,10 @@ class Preprocessor(object):
         :return: a distributed representation, size=(vec_dim,)
         """
         news_tokenized = tokenize_sentence(news, self.W_norm, self.vocab)
-        logger.info('news_tokenized size='+str(news_tokenized.shape))
+        # logger.info('news_tokenized size='+str(news_tokenized.shape))
         news_representation = strToVector(news_tokenized,
                                           self.rae_W1, self.rae_W2, self.rae_b)
-        logger.info('news_representation size='+str(news_representation.shape))
+        # logger.info('news_representation size='+str(news_representation.shape))
         return news_representation
 
     def convertOneDayAllNewsToVec(self, news_rep_list, max_len=200):
@@ -114,14 +116,15 @@ class Preprocessor(object):
         """
         if dt == None:
             return None
-        dt1 = dt + timedelta(1)
-        dt2 = dt + timedelta(max_td)
+        dt1 = dt + timedelta(days=1)
+        dt2 = dt + timedelta(days=max_td)
 
         stock_data = ts.get_hist_data('sh', start=self.formatDateString(dt1),
                                       end=self.formatDateString(dt2))
         if stock_data.empty:
             return None
         return stock_data.as_matrix(['p_change'])[-1]
+
 
     def formatDateString(self, dt):
         """
@@ -140,6 +143,84 @@ class Preprocessor(object):
         rvalue += str(dt.day)
         return rvalue
 
+    def readNewsFromFile(self, filename, return_pchange=True,
+                         max_len=200, year='2015'):
+        """
+        :param filename:
+        :param max_len:
+        :return: tensor(nb_days, max_len, vector_dim) - news vector
+                 tensor(nb_days, 1) - date
+        """
+        one_day_news = list()
+        news = ""
+        base_time = datetime(1991, 12, 20, 0, 0)
+        r_news = None
+        r_pchange = None
+        with open(filename, 'r') as f:
+            for line in f.readlines():
+                line = line.strip()
+                if len(line) < 1:
+                    continue  # skip if empty line
+                if re.match(r'^\d+月\d+日 \d+:\d+$', line):
+                    line_time = datetime.strptime(year+"年"+line,
+                                                  '%Y年%m月%d日 %H:%M')
+                    line_time = self.getStockDate(line_time)
+
+                    # one day data process
+                    if (line_time-base_time).days >= 1 \
+                            and len(one_day_news) == 0:
+                        base_time = line_time
+                        one_day_news.append(self.convertOneNewsToVec(news))
+                    elif (line_time-base_time).days >= 1 \
+                            and len(one_day_news) > 0:
+                        tmp = self.convertOneDayAllNewsToVec(one_day_news,
+                                                             max_len=max_len)
+                        if r_news is None:
+                            r_news = tmp
+                        else:
+                            r_news = np.vstack((r_news, tmp))
+
+                        if return_pchange:
+                            p_change = self.getNextDayStockPchange(base_time-timedelta(days=1))
+                            logger.info("next day change ="+str(p_change))
+                            tmp = [[p_change]]
+                            if r_pchange is None:
+                                r_pchange = tmp
+                            else:
+                                r_pchange = np.vstack((r_pchange, tmp))
+                        else:
+                            pass
+
+                        base_time = line_time
+                        one_day_news = list()
+                        one_day_news.append(self.convertOneNewsToVec(news))
+
+                        logger.info('one day++')
+                    else:
+                        one_day_news.append(self.convertOneNewsToVec(news))
+                else:
+                    news = line
+        if r_news is not None:
+            tmp = self.convertOneDayAllNewsToVec(one_day_news,
+                                                 max_len=max_len)
+            r_news = np.vstack((r_news, tmp))
+            if return_pchange:
+                p_change = self.getNextDayStockPchange(base_time-timedelta(days=1))
+                r_pchange = np.vstack((r_pchange, [[p_change]]))
+
+        return r_news, r_pchange
+
+    def getStockDate(self, dt):
+        """
+        return the actual return date of date dt
+        #Input: date time type dt
+        """
+        if dt.hour < 15:  # 当天交易日
+            dt = datetime(dt.year, dt.month, dt.day, 0, 0)
+        else:  # 下一交易日
+            dt = datetime(dt.year, dt.month, dt.day, 0, 0) + timedelta(days=1)
+        return dt
+
 if __name__ == '__main__':
     p = Preprocessor()
     # news_rep1 = p.convertOneNewsToVec("平安称陆金所下半年启动上市 不受战新板不确定性影响")
@@ -151,5 +232,7 @@ if __name__ == '__main__':
     # news_rep_list = np.vstack((news_rep1, news_rep2))
     # print p.convertOneDayAllNewsToVec(news_rep_list)
     # print p.convertOneDayAllNewsToVec(news_rep_list).shape
-    m = p.getPreviousStockData(td=2)
-    print m
+    #m = p.getPreviousStockData(td=2)
+    X,y = p.readNewsFromFile('201501news.txt', max_len=3)
+    print X
+    print y
