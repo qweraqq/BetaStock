@@ -106,7 +106,7 @@ class Preprocessor(object):
         stock_data = stock_data[stock_data.shape[0]::-1, :]
         return stock_data
 
-    def getPreviousStockData(self, dt=None, max_td=7):
+    def getNextDayStockPchange(self, dt=None, max_td=7):
         """
         :param dt:
         :param max_td:
@@ -122,7 +122,6 @@ class Preprocessor(object):
         if stock_data.empty:
             return None
         return stock_data.as_matrix(['p_change'])[-1]
-
 
     def formatDateString(self, dt):
         """
