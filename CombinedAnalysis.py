@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from keras.models import Sequential, Graph
-from keras.layers import Merge, LSTM, Dense
+from keras.layers import Merge, LSTM, Dense, Dropout
 from keras.models import model_from_json
 from str2vec import *
 
@@ -109,18 +109,21 @@ class CombinedAnalysis(object):
         """
         model1 = Sequential()
         model1.add(LSTM(50, input_shape=(200, 5), return_sequences=True))
+        model1.add(Dropout(0.9))
         model1.add(LSTM(50, input_dim=50))
+        model1.add(Dropout(0.9))
         model1.set_weights(self.index_model.get_weights())
 
         model2 = Sequential()
         model2.add(LSTM(100, input_shape=(200, 100), activation='tanh', inner_activation='sigmoid'))
         model2.set_weights(self.fundamental_model_weights)
-
+        model1.add(Dropout(0.9))
         self.model.add(Merge([model1, model2],
                        mode='concat', concat_axis=-1))
-        self.model.add(Dense(200, input_dim=150, activation='tanh'))
-        self.model.add(Dense(1, input_dim=200, activation='linear'))
-
+        self.model.add(Dropout(0.8))
+        self.model.add(Dense(100, input_dim=150, activation='tanh'))
+        self.model.add(Dropout(0.2))
+        self.model.add(Dense(1, input_dim=100, activation='linear'))
 
         print self.model.summary()
 
@@ -151,16 +154,25 @@ if __name__ == '__main__':
     # print ca.technicalAnalysisSingleNews("平安称陆金所下半年启动上市 不受战新板不确定性影响")
     ca.buildCombinedModels()
     preprocess = Preprocessor()
-    X1, X2, y =preprocess.readNewsFromFile('201501news.txt', max_len=200)
+    # X1, X2, y =preprocess.readNewsFromFile('training_new.txt', max_len=200)
+    X1 = np.load('X1.txt')
+    X2 = np.load('X2.txt')
+    y = np.load('y.txt')
     print X1.shape
     print X2.shape
     print y.shape
+
     ca.model.compile(loss='mean_squared_error', optimizer='adagrad')
     earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                  patience=10, verbose=0, mode='auto')
-    ca.model.fit([X2, X1], y, batch_size=100, nb_epoch=100, validation_split=0.2)
+                                                  patience=30, verbose=0, mode='auto')
+    ca.model.fit([X2, X1], y, batch_size=100, nb_epoch=1000, validation_split=0.3,
+                 callbacks=[earlyStopping], shuffle=True)
     json_string = ca.model.to_json()
     f = open("ca.model.json", "w")
     f.write(json_string)
     f.close()
     ca.model.save_weights('ca.model.weights.h5')
+
+    np.save(open('X2.txt', 'w'), X2)
+    np.save(open('X1.txt', 'w'), X1)
+    np.save(open('y.txt', 'w'), y)
