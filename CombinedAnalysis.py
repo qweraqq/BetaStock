@@ -109,21 +109,17 @@ class CombinedAnalysis(object):
         """
         model1 = Sequential()
         model1.add(LSTM(50, input_shape=(200, 5), return_sequences=True))
-        model1.add(Dropout(0.9))
         model1.add(LSTM(50, input_dim=50))
-        model1.add(Dropout(0.9))
         model1.set_weights(self.index_model.get_weights())
 
         model2 = Sequential()
         model2.add(LSTM(100, input_shape=(200, 100), activation='tanh', inner_activation='sigmoid'))
         model2.set_weights(self.fundamental_model_weights)
-        model1.add(Dropout(0.9))
         self.model.add(Merge([model1, model2],
                        mode='concat', concat_axis=-1))
-        self.model.add(Dropout(0.8))
-        self.model.add(Dense(100, input_dim=150, activation='tanh'))
-        self.model.add(Dropout(0.2))
-        self.model.add(Dense(1, input_dim=100, activation='linear'))
+        # self.model.add(Dense(100, input_dim=150, activation='tanh'))
+        # self.model.add(Dropout(0.2))
+        self.model.add(Dense(1, input_dim=150, activation='linear'))
 
         print self.model.summary()
 
@@ -165,8 +161,8 @@ if __name__ == '__main__':
 
     ca.model.compile(loss='mean_squared_error', optimizer='adagrad')
     earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                  patience=30, verbose=0, mode='auto')
-    ca.model.fit([X2, X1], y, batch_size=100, nb_epoch=1000, validation_split=0.3,
+                                                  patience=2, verbose=0, mode='auto')
+    ca.model.fit([X2, X1], y, batch_size=100, nb_epoch=1, validation_split=0.1,
                  callbacks=[earlyStopping], shuffle=True)
     json_string = ca.model.to_json()
     f = open("ca.model.json", "w")
@@ -174,6 +170,10 @@ if __name__ == '__main__':
     f.close()
     ca.model.save_weights('ca.model.weights.h5')
 
-    np.save(open('X2.txt', 'w'), X2)
-    np.save(open('X1.txt', 'w'), X1)
-    np.save(open('y.txt', 'w'), y)
+    # np.save(open('X2.txt', 'w'), X2)
+    # np.save(open('X1.txt', 'w'), X1)
+    # np.save(open('y.txt', 'w'), y)
+    # TODO
+    """
+        layer by layer and fine tuning
+    """
