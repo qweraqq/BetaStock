@@ -107,14 +107,14 @@ class CombinedAnalysis(object):
         """
         model1 = Sequential()
         model1.add(LSTM(50, input_dim=5, return_sequences=True))
-        model1.add(LSTM(50, input_dim=50, return_sequences=True))
+        model1.add(LSTM(50, input_dim=50))
         model1.set_weights(self.index_model.get_weights())
 
         model2 = Sequential()
         model2.add(LSTM(100, input_dim=100, activation='tanh', inner_activation='sigmoid'))
         model2.set_weights(self.fundamental_model_weights)
 
-        self.model.add(Merge([model1, self.model2],
+        self.model.add(Merge([model1, model2],
                        mode='concat', concat_axis=-1))
         self.model.add(Dense(200, input_dim=150, activation='tanh'))
         self.model.add(Dense(1, input_dim=200, activation='linear'))
