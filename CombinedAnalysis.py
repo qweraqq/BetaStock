@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from keras.models import Sequential, Graph
-from keras.layers import Merge, LSTM, Dense, Dropout
+from keras.layers import Merge, LSTM, Dense, Dropout, AutoEncoder
 from keras.models import model_from_json
 from str2vec import *
 
@@ -12,6 +12,20 @@ import logging
 logging.basicConfig(level=logging.CRITICAL)
 # logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('Combined Analysis.py')
+
+import theano.tensor as T
+
+def custom_objective(y_true, y_pred,):
+    """
+    Custom objective function
+    :param y_true: real value
+    :param y_pred: predicted value
+    :return: cost
+    """
+    on_unused_input='warn'
+    y1 = T.as_tensor_variable(y_pred)
+    y2 = T.as_tensor_variable(y_true)
+    return 0*y1+0*T.sum(y2)
 
 class CombinedAnalysis(object):
     """
@@ -119,7 +133,7 @@ class CombinedAnalysis(object):
                        mode='concat', concat_axis=-1))
         # self.model.add(Dense(100, input_dim=150, activation='tanh'))
         # self.model.add(Dropout(0.2))
-        self.model.add(Dense(1, input_dim=150, activation='linear'))
+        # self.model.add(Dense(1, input_dim=150, activation='linear'))
 
         print self.model.summary()
 
@@ -142,38 +156,58 @@ class CombinedAnalysis(object):
     #     print self.model.summary()
 
 if __name__ == '__main__':
-    ca = CombinedAnalysis()
+    # ca = CombinedAnalysis()
     # print ca.technicalAnalysisSingleNews("快讯：沪指午后发力站上2900点 创业板涨超5%")
     # print ca.technicalAnalysisSingleNews("财经观察：全球经济风险致美联储暂缓加息")
     # print ca.technicalAnalysisSingleNews("中石油再遭低油价重击 大庆油田前两个月亏损超50亿")
     # print ca.technicalAnalysisSingleNews("深港通力争今年开通 创业板股票将纳入标的")
     # print ca.technicalAnalysisSingleNews("首家自贸区合资券商申港证券获批 证券行业对外开放提速")
     # print ca.technicalAnalysisSingleNews("平安称陆金所下半年启动上市 不受战新板不确定性影响")
-    ca.buildCombinedModels()
+    # ca.buildCombinedModels()
     preprocess = Preprocessor()
     # X1, X2, y =preprocess.readNewsFromFile('training_new.txt', max_len=200)
     X1 = np.load('X1.txt')
     X2 = np.load('X2.txt')
     y = np.load('y.txt')
-    print X1.shape
-    print X2.shape
-    print y.shape
+    # print X1.shape
+    # print X2.shape
+    # print y.shape
+    X3 = np.load('X3.txt')
+    print X3.shape
 
-    ca.model.compile(loss='mean_squared_error', optimizer='adagrad')
+    # ca.model.compile(loss=custom_objective, optimizer='adagrad')
     earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                  patience=2, verbose=0, mode='auto')
-    ca.model.fit([X2, X1], y, batch_size=100, nb_epoch=1, validation_split=0.1,
-                 callbacks=[earlyStopping], shuffle=True)
-    json_string = ca.model.to_json()
-    f = open("ca.model.json", "w")
-    f.write(json_string)
-    f.close()
-    ca.model.save_weights('ca.model.weights.h5')
+                                                  patience=20, verbose=0, mode='auto')
+    # ca.model.fit([X2, X1], y, batch_size=100, nb_epoch=1, validation_split=0.1,
+    #              callbacks=[earlyStopping], shuffle=True)
+    # X3 = ca.model.predict([X2, X1])
+    # np.save(open('X3.txt', 'w'), X3)
+    # json_string = ca.model.to_json()
+    # f = open("ca.model.json", "w")
+    # f.write(json_string)
+    # f.close()
+    # ca.model.save_weights('ca.model.weights.h5')
 
     # np.save(open('X2.txt', 'w'), X2)
     # np.save(open('X1.txt', 'w'), X1)
     # np.save(open('y.txt', 'w'), y)
-    # TODO
-    """
-        layer by layer and fine tuning
-    """
+
+    encoder = Sequential([Dense(150, input_dim=150, activation='tanh'), Dropout(0.2)])
+    decoder = Sequential([Dense(150, input_dim=150, activation='linear')])
+    ae = Sequential()
+    ae.add(AutoEncoder(encoder=encoder, decoder=decoder,
+                       output_reconstruction=False))
+    ae.compile(loss='mean_squared_error', optimizer='rmsprop')
+    ae.fit(X3, X3, batch_size=100, nb_epoch=200)
+
+    final_layer = Sequential()
+    final_layer.add(ae.layers[0].encoder)
+    final_layer.add(Dropout(0.2))
+    final_layer.add(Dense(1, input_dim=150, activation='linear'))
+    final_layer.compile(loss='mean_squared_error', optimizer='rmsprop')
+    final_layer.fit(X3, y, validation_split=0.5,
+                    callbacks=[earlyStopping], shuffle=True)
+
+    y_predcit = final_layer.predict(X3)
+    for idx,yy in enumerate(y):
+        print y[idx], y_predcit[idx]
