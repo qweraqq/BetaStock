@@ -10,8 +10,8 @@ from str2vec import *
 from keras.preprocessing import sequence
 from datetime import datetime, date, time, timedelta
 import logging
-# logging.basicConfig(level=logging.CRITICAL)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.CRITICAL)
+# logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('Preprocess.py')
 
 
@@ -125,9 +125,9 @@ class Preprocessor(object):
         if dt == None:
             dt = datetime.today()
         dt2 = dt - timedelta(days=td)
-        logger.info(self.formatDateString(dt2))
+        # logger.info(self.formatDateString(dt2))
         stock_data = ts.get_hist_data('sh', start=self.formatDateString(dt2),
-                                      end=self.formatDateString(dt))
+                                      end=self.formatDateString(dt), retry_count=10)
 
         stock_data = stock_data.as_matrix(['open', 'high', 'low', 'p_change', 'volume', 'close'])
         stock_data = stock_data[stock_data.shape[0]::-1, :]
@@ -135,7 +135,7 @@ class Preprocessor(object):
         #
         return stock_data
 
-    def getNextDayStockPchange(self, dt=None, max_td=7):
+    def getNextDayStockPchange(self, dt=None, max_td=20):
         """
         :param dt:
         :param max_td:
@@ -147,9 +147,9 @@ class Preprocessor(object):
         dt2 = dt + timedelta(days=max_td)
 
         stock_data = ts.get_hist_data('sh', start=self.formatDateString(dt1),
-                                      end=self.formatDateString(dt2))
+                                      end=self.formatDateString(dt2), retry_count=10)
         if stock_data.empty:
-            return None
+            return 0
         return stock_data.as_matrix(['p_change'])[-1]
 
 
@@ -212,9 +212,9 @@ class Preprocessor(object):
 
                         # second, r_stock
                         tmp = self.getPreviousStockData(dt=base_time-timedelta(days=1),
-                                                        td=300)
+                                                        td=150)
                         tmp = tmp[np.newaxis, :, :]
-                        tmp = sequence.pad_sequences(tmp, maxlen=max_len+100,
+                        tmp = sequence.pad_sequences(tmp, maxlen=max_len,
                                                      dtype='float32')
 
                         if r_stock is None:
@@ -226,7 +226,7 @@ class Preprocessor(object):
                         if return_pchange:
                             p_change = self.getNextDayStockPchange(base_time-timedelta(days=1))
                             logger.info("next day change ="+str(p_change))
-                            tmp = [[p_change]]
+                            tmp = [p_change]
                             if r_pchange is None:
                                 r_pchange = tmp
                             else:
@@ -248,15 +248,15 @@ class Preprocessor(object):
                                                  max_len=max_len)
             r_news = np.vstack((r_news, tmp))
             tmp = self.getPreviousStockData(dt=base_time-timedelta(days=1),
-                                            td=300)
+                                            td=150)
             tmp = tmp[np.newaxis, :, :]
-            tmp = sequence.pad_sequences(tmp, maxlen=max_len+100,
+            tmp = sequence.pad_sequences(tmp, maxlen=max_len,
                                          dtype='float32')
             r_stock = np.vstack((r_stock, tmp))
 
             if return_pchange:
                 p_change = self.getNextDayStockPchange(base_time-timedelta(days=1))
-                r_pchange = np.vstack((r_pchange, [[p_change]]))
+                r_pchange = np.vstack((r_pchange, [p_change]))
 
         return r_news, r_stock, r_pchange
 
