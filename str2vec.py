@@ -3,7 +3,7 @@ from __future__ import division
 import jieba
 import logging
 import numpy as np
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 
@@ -95,11 +95,11 @@ def tokenize_sentence(line, W_norm, vocab, tmp_lambda=0.6):
            tmp_lambda(type float) is a word seg revision parameter
     """
     vector_dim = W_norm.shape[1]
-    rvalue = np.zeros((1,vector_dim))
+    rvalue = np.zeros((1, vector_dim))
     sen = list(jieba.cut(line))
     for j, w in enumerate(sen):
         w = w.encode('utf-8')
-        if vocab.has_key(w) == False:
+        if w not in vocab:
             if j >= 1:
                 rvalue = np.vstack((rvalue, Wj_1))
             Wj_1 = np.zeros((1, vector_dim))  # word 'unk'=[0]
@@ -120,6 +120,17 @@ def tokenize_sentence(line, W_norm, vocab, tmp_lambda=0.6):
         if j == len(sen)-1:  # end
            rvalue = np.vstack((rvalue, Wj_1))
     return np.delete(rvalue, 0, 0)
+
+
+def tokenizeSentence(line, W_norm, vocab, tmp_lambda=0.6):
+    """
+    convert a sentence to a matrix && Chinese word seg revision
+    matrix size = sentence length, word embeddings dim
+
+    Input: line is the sentence(type sring) to tokenize
+           tmp_lambda(type float) is a word seg revision parameter
+    """
+    return tokenize_sentence(line, W_norm, vocab, tmp_lambda=0.6)
 
 
 if __name__ == '__main__':

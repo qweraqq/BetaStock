@@ -31,7 +31,7 @@ def featureNormalization(X, mode=0):
 
     if mode == 1:
         X[:, 4] = X[:, 4] * 100
-        X[:, 4] = X[:, 4] / 320000000000
+        X[:, 4] = X[:, 4] / 320000000000  # shanghai stock market total value
     X[:, 3] = X[:, 3]/100
     tmp = X[1:, :]
     last_day_close = X[0:-1, 5]
