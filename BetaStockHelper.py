@@ -76,14 +76,18 @@ class BetaStockHelper(object):
 
         # load word embeddings
         if 'word_emb_file' in kwargs:
-            self.word_embeddings_vector_file = kwargs['word_emb_file']
+            self.word_emb_file = kwargs['word_emb_file']
         else:
-            self.word_embeddings_vector_file = './data_preserved/word.vectors.txt'
+            self.word_emb_file = './data_preserved/word.vectors.txt'
 
         if 'word_emb_vocab' in kwargs:
-            self.word_embeddings_dict_file = kwargs['word_emb_vocab']
+            self.word_emb_vocab = kwargs['word_emb_vocab']
         else:
-            self.word_embeddings_dict_file = './data_preserved/word.vocab.txt'
+            self.word_emb_vocab = './data_preserved/word.vocab.txt'
+        # word embeddings, vocab
+        self.W_norm, self.vocab, _ = \
+            loadWordEmbeddings(self.word_emb_vocab,
+                               self.word_emb_file)
 
         # load RAE parameters
         if 'rae_param_dict' in kwargs:
@@ -101,8 +105,8 @@ class BetaStockHelper(object):
         :param news_headline:
         :return:
         """
-        news_tokenized = tokenize_sentence(news_headline,
-                                           self.W_norm, self.vocab)
+        news_tokenized = tokenizeSentence(news_headline,
+                                          self.W_norm, self.vocab)
         news_rep = strToVector(news_tokenized,
                                self.rae_W1, self.rae_W2, self.rae_b)
 
@@ -148,4 +152,26 @@ class BetaStockHelper(object):
         stock_data = stock_data[stock_data.shape[0]::-1, :]
         stock_data = featureNormalization(stock_data, mode=1)
         return stock_data
+
+    def __getStockDate(self, dt):
+        """
+        :param dt:
+        :return:
+        """
+        if type(dt) is not datetime:
+            return None
+        if dt.hour < 15:  # 当天交易日
+            dt = datetime(dt.year, dt.month, dt.day, 0, 0)
+        else:  # 下一交易日
+            dt = datetime(dt.year, dt.month, dt.day, 0, 0) + timedelta(days=1)
+        return dt
+
+
+if __name__ == '__main__':
+    helper = BetaStockHelper()
+    news_rep1 = helper.str2Vec("平安称陆金所下半年启动上市 不受战新板不确定性影响")
+    news_rep2 = helper.str2Vec("财经观察：全球经济风险致美联储暂缓加息")
+    print news_rep1
+    print '--------------------------'
+    print np.sum(news_rep2**2)
 
