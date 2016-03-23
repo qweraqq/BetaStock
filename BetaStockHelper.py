@@ -2,7 +2,7 @@
 from str2vec import *
 from datetime import datetime, timedelta
 import tushare as ts
-
+import numpy as np
 
 def formatDateString(dt):
     """
@@ -25,6 +25,7 @@ def formatDateString(dt):
 
 def featureNormalization(X, mode=0):
     """
+    Do your own normalization
     :param X: (nb_examples, nb_features) matrix
               here, nb_samples a.k.a timesteps
               X[: ,0] = (open-last_day_close)/last_day_close
@@ -39,14 +40,17 @@ def featureNormalization(X, mode=0):
 
     if mode == 1:
         X[:, 4] = X[:, 4] * 100
-        X[:, 4] = X[:, 4] / 320000000000
+        X[:, 4] = X[:, 4] / 320000000000  # shanghai stock market total value
     X[:, 3] = X[:, 3]/100
     tmp = X[1:, :]
     last_day_close = X[0:-1, 5]
     last_day_close = last_day_close.reshape((len(last_day_close), 1))
     tmp[:, 0:3] = (tmp[:, 0:3] - last_day_close) / last_day_close
-    tmp[:, 0:5] = tmp[:, 0:5] * 10
-    return tmp[:, 0:5]
+    r_value = np.copy(tmp[:, 0:5])
+    # Now r_value is as described
+    # Do your own normalization
+    r_value *= 10
+    return r_value
 
 class BetaStockHelper(object):
     """
@@ -143,5 +147,5 @@ class BetaStockHelper(object):
         stock_data = stock_data.as_matrix(['open', 'high', 'low', 'p_change', 'volume', 'close'])
         stock_data = stock_data[stock_data.shape[0]::-1, :]
         stock_data = featureNormalization(stock_data, mode=1)
-        #
         return stock_data
+
