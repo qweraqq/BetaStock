@@ -175,3 +175,4 @@ if __name__ == '__main__':
     print '--------------------------'
     print np.sum(news_rep2**2)
 
+
