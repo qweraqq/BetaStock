@@ -155,6 +155,7 @@ class BetaStockHelper(object):
 
     def __getStockDate(self, dt):
         """
+
         :param dt:
         :return:
         """
