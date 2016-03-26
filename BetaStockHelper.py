@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 from str2vec import *
 from datetime import datetime, timedelta
+from keras.preprocessing import sequence
 import tushare as ts
 import numpy as np
 import pandas as pd
+import os
+
 
 def formatDateString(dt):
     """
@@ -23,6 +26,12 @@ def formatDateString(dt):
     rvalue += str(dt.day)
     return rvalue
 
+def y_transform(y):
+    """
+    transform y(p_change) into labels
+    :param y:
+    :return:
+    """
 
 def featureNormalization(X, mode=0):
     """
@@ -103,8 +112,8 @@ class BetaStockHelper(object):
 
     def str2Vec(self, news_headline):
         """
-        :param news_headline:
-        :return:
+        :param news_headline: type string, like 'lianghui shunli zhaokai'
+        :return: distributed rep for the news headline
         """
         news_tokenized = tokenizeSentence(news_headline,
                                           self.W_norm, self.vocab)
@@ -115,8 +124,9 @@ class BetaStockHelper(object):
 
     def getNextDayReturn(self, dt=None, max_day_try=10):
         """
+        given a date, return the return next day
         :param dt: type datetime
-        :param max_day_try: to skip stock breaks, default 10
+        :param max_day_try: type int, to skip stock breaks, default 10
         :return: None if invalid, return_next_day otherwise
         """
         if type(dt) is not datetime:
@@ -193,6 +203,31 @@ class BetaStockHelper(object):
         r_y = r_y[np.newaxis, :, :]
         return r_X, r_y
 
+    def readAllData(self, dictname, maxlen=300):
+        """
+        read all files in dictname
+        :param dictname: dictionary name
+        :param maxlen:  type int, padding parameters
+        :return: tuple (X, y)
+                 X = (nb_samples, timesteps, nb_features)
+                 y = (nb_samples, timesteps, nb_labels)
+                 timesteps = maxlen
+        """
+        X = None
+        y = None
+        file_list = os.listdir(dictname)
+        for idx, f in enumerate(file_list):
+            file_name = dictname+f
+            X_tmp, y_tmp = self.readSingleFromFile(file_name)
+            X_tmp = sequence.pad_sequences(X_tmp, maxlen=maxlen, dtype='float32')
+            y_tmp = sequence.pad_sequences(y_tmp, maxlen=maxlen, dtype='float32')
+            if idx == 0:
+                X = X_tmp
+                y = y_tmp
+                continue
+            X = np.vstack((X, X_tmp))
+            y = np.vstack((y, y_tmp))
+        return X, y
 
 if __name__ == '__main__':
     helper = BetaStockHelper()
@@ -202,6 +237,9 @@ if __name__ == '__main__':
     # print '--------------------------'
     # print np.sum(news_rep2**2)
     helper.readSingleFromFile('test.csv', mode=1)
+    X, y = helper.readAllData('./data/')
+    print y
+
 
 
 
