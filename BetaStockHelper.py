@@ -32,6 +32,12 @@ def y_transform(y):
     :param y:
     :return:
     """
+    if y<=-1.5:
+        y = 1
+    elif y>-1.5:
+        pass
+
+    return y
 
 def featureNormalization(X, mode=0):
     """
@@ -198,8 +204,8 @@ class BetaStockHelper(object):
         X = X[::-1, :]
         X = featureNormalization(X, mode=mode)
         r_X = X[np.newaxis, 0:-1, :]
-        r_y = X[1:, 3]
-        r_y = r_y.reshape((len(r_y),1))
+        r_y = np.copy(X[1:, 3])
+        r_y = r_y.reshape((len(r_y), 1))
         r_y = r_y[np.newaxis, :, :]
         return r_X, r_y
 
