@@ -37,29 +37,40 @@ def formatDateString(dt):
     rvalue += str(dt.day)
     return rvalue
 
+
+## very important
+def y_t(y):
+    for idx,_ in enumerate(y):
+        y[idx] = y_transform(y[idx])
+    return y
+
 def y_transform(y):
     """
     transform y(p_change) into labels
     :param y:
     :return:
     """
-    if y<=-5:
-        r = 0
-    elif y>-5 and y<=-2:
-        r = 1
-    elif y>-2 and y<=-1:
-        r=2
-    elif y>-1 and y<=0:
-        r=3
-    elif y>0 and y<=1:
-        r=4
-    elif y>1 and y<=2:
-        r=5
-    elif y>2 and y<=5:
-        r=6
-    else:
-        r=7
-    return r
+    # if y<=-6:
+    #     r = 0
+    # elif y>-6 and y<=-3:
+    #     r = 1
+    # elif y>-3 and y<=-1:
+    #     r=2
+    # elif y>-1 and y<=0:
+    #     r=3
+    # elif y>0 and y<=1:
+    #     r=4
+    # elif y>1 and y<=3:
+    #     r=5
+    # elif y>3 and y<=6:
+    #     r=6
+    # else:
+    #     r=7
+    # if y<=0:
+    #     r=-1
+    # else:
+    #     r=1
+    return y
 
 def featureNormalization(X, mode=0):
     """
@@ -77,8 +88,10 @@ def featureNormalization(X, mode=0):
     """
 
     if mode == 1:
-        X[:, 4] = X[:, 4] * 10000
-        X[:, 4] = X[:, 4] / 320000000000  # shanghai stock market total value
+        X[:, 4] = X[:, 4] * 1
+        X[:, 4] = X[:, 4] / 250000000  # shanghai stock market total value
+    else:
+        X[:, 4] /= 100
     X[:, 3] = X[:, 3]/100  # p_change
     tmp = X[1:, :]  # close, remove first day which do not have a previous close
     last_day_close = X[0:-1, 5]
@@ -116,12 +129,12 @@ class BetaStockHelper(object):
         if 'word_emb_file' in kwargs:
             self.word_emb_file = kwargs['word_emb_file']
         else:
-            self.word_emb_file = './data_preserved/word.vectors.txt'
+            self.word_emb_file = 'F:\\BetaStock\\data_preserved\\word.vectors.txt'
 
         if 'word_emb_vocab' in kwargs:
             self.word_emb_vocab = kwargs['word_emb_vocab']
         else:
-            self.word_emb_vocab = './data_preserved/word.vocab.txt'
+            self.word_emb_vocab = 'F:\\BetaStock\\data_preserved\\word.vocab.txt'
         # word embeddings, vocab
         self.W_norm, self.vocab, _ = \
             loadWordEmbeddings(self.word_emb_vocab,
@@ -131,7 +144,7 @@ class BetaStockHelper(object):
         if 'rae_param_dict' in kwargs:
             self.rae_param_dict = kwargs['rae_param_dict']
         else:
-            self.rae_param_dict = './data_preserved/'
+            self.rae_param_dict = 'F:\\BetaStock\\data_preserved\\'
 
         self.rae_W1, self.rae_W2, self.rae_b = \
             loadRaeParameters(self.rae_param_dict+'W1.txt',
@@ -226,7 +239,10 @@ class BetaStockHelper(object):
         X = X[::-1, :]
         X = featureNormalization(X, mode=mode)
         r_X = X[np.newaxis, 0:-1, :]
-        r_y = np.copy(X[1:, 3])
+
+        ###### y value transformation
+        r_y = np.copy(X[1:, 3])*10
+        r_y  = y_t(r_y)
         r_y = r_y.reshape((len(r_y), 1))
         r_y = r_y[np.newaxis, :, :]
         return r_X, r_y
@@ -264,8 +280,7 @@ if __name__ == '__main__':
     # print news_rep1
     # print '--------------------------'
     # print np.sum(news_rep2**2)
-    helper.readSingleFromFile('test.csv', mode=1)
-    X, y = helper.readAllData('./data/')
+    X, y = helper.readAllData('I:\\BetaStock\\data\\')
     print y
 
 
