@@ -7,11 +7,22 @@ import numpy as np
 import pandas as pd
 import os
 
+def to_categorical(y, nb_classes=8):
+    '''
+    Convert class vector (integers from 0 to nb_classes)
+    to binary class matrix, for use with categorical crossentropy
+    '''
+    y = np.asarray(y, dtype='int32')
+    Y = np.zeros((np.shape(y)[0], np.shape(y)[1], nb_classes))
+    for i in range(np.shape(y)[0]):
+        for j in range(np.shape(y)[1]):
+            Y[i, j , y[i,j,0]] = 1
+    return Y
 
 def formatDateString(dt):
     """
-    :param dt:
-    :return:
+    :param dt: type datetime
+    :return: formatted datetime string
     """
     assert type(dt) is datetime, 'input type must be datetime type'
     rvalue = ""
@@ -32,12 +43,23 @@ def y_transform(y):
     :param y:
     :return:
     """
-    if y<=-1.5:
-        y = 1
-    elif y>-1.5:
-        pass
-
-    return y
+    if y<=-5:
+        r = 0
+    elif y>-5 and y<=-2:
+        r = 1
+    elif y>-2 and y<=-1:
+        r=2
+    elif y>-1 and y<=0:
+        r=3
+    elif y>0 and y<=1:
+        r=4
+    elif y>1 and y<=2:
+        r=5
+    elif y>2 and y<=5:
+        r=6
+    else:
+        r=7
+    return r
 
 def featureNormalization(X, mode=0):
     """
@@ -55,7 +77,7 @@ def featureNormalization(X, mode=0):
     """
 
     if mode == 1:
-        X[:, 4] = X[:, 4] * 100
+        X[:, 4] = X[:, 4] * 10000
         X[:, 4] = X[:, 4] / 320000000000  # shanghai stock market total value
     X[:, 3] = X[:, 3]/100  # p_change
     tmp = X[1:, :]  # close, remove first day which do not have a previous close
