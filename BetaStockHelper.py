@@ -93,6 +93,7 @@ def featureNormalization(X, mode=0):
     else:
         X[:, 4] /= 100
     X[:, 3] = X[:, 3]/100  # p_change
+    r_y = np.copy(X[2:, 3])*100
     tmp = X[1:, :]  # close, remove first day which do not have a previous close
     last_day_close = X[0:-1, 5]
     last_day_close = last_day_close.reshape((len(last_day_close), 1))
@@ -100,8 +101,9 @@ def featureNormalization(X, mode=0):
     r_value = np.copy(tmp[:, 0:5])
     # Now r_value is as described
     # Do your own normalization
-    r_value *= 10
-    return r_value
+    # r_value *= 10
+    r_value = np.sign(r_value)*np.log(1+np.abs(r_value*10))
+    return r_value, r_y
 
 class BetaStockHelper(object):
     """
@@ -237,11 +239,11 @@ class BetaStockHelper(object):
             df = pd.read_csv(filename, sep=',', header=0, usecols=[1, 2, 4, 5, 7, 3])
             X = df.as_matrix(['open', 'high', 'low', 'p_change', 'volume', 'close'])
         X = X[::-1, :]
-        X = featureNormalization(X, mode=mode)
+        X,r_y = featureNormalization(X, mode=mode)
         r_X = X[np.newaxis, 0:-1, :]
 
         ###### y value transformation
-        r_y = np.copy(X[1:, 3])*10
+
         r_y  = y_t(r_y)
         r_y = r_y.reshape((len(r_y), 1))
         r_y = r_y[np.newaxis, :, :]
