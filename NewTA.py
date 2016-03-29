@@ -55,14 +55,14 @@ if __name__ == '__main__':
 
     model = Sequential()
     model.add(LSTM(nb_hidden, input_dim=data_dim, return_sequences=True,
-                   W_regularizer=l2(0.0001), b_regularizer=l2(0.001)))
-    model.add(Dropout(0.5))
+                   W_regularizer=l2(0), b_regularizer=l2(0)))
+    model.add(Dropout(0.6))
     model.add(LSTM(nb_hidden, input_dim=nb_hidden, return_sequences=True,
-                   W_regularizer=l2(0.0001), b_regularizer=l2(0.001)))
-    model.add(Dropout(0.5))
+                   W_regularizer=l2(0), b_regularizer=l2(0)))
+    model.add(Dropout(0.6))
     model.add(TimeDistributedDense(nb_classes, input_dim=nb_hidden,
-                                   activation='linear', W_regularizer=l2(0.00001),
-                                   b_regularizer=l2(0.0001)))
+                                   activation='linear', W_regularizer=l2(0),
+                                   b_regularizer=l2(0)))
 
     model.compile(loss=custom_objective1, optimizer='rmsprop')
 
@@ -71,16 +71,16 @@ if __name__ == '__main__':
 
     model.fit(X_train, y_train, batch_size=300, nb_epoch=200,
               validation_split=0.3, callbacks=[earlyStopping],
-              shuffle=True, show_accuracy=True)
+              shuffle=True, show_accuracy=False)
     json_string = model.to_json()
-    file_to_save_model = open("ta_wmse2.model.json", "w")
+    file_to_save_model = open("ta_wmse_trans.model.json", "w")
     file_to_save_model.write(json_string)
     file_to_save_model.close()
-    model.save_weights('ta_wmse2.model.weights.h5')
+    model.save_weights('ta_wmse_trans.model.weights.h5')
 
     X_test, y_test = helper.readSingleFromFile("I:\\BetaStock\\test\\sh.csv", mode=1)
     #y_test = to_categorical(y_test, nb_classes=8)
     score = model.evaluate(X_test, y_test, batch_size=1, verbose=1)
     y_predict = model.predict(X_test,  batch_size=1)
-    np.savetxt('y_test_wmse2.txt', y_test.reshape((y_test.shape[1], y_test.shape[2])))
-    np.savetxt('y_predict_wmse2.txt', y_predict.reshape((y_test.shape[1], y_test.shape[2])))
+    np.savetxt('y_test_wmse_trans.txt', y_test.reshape((y_test.shape[1], y_test.shape[2])))
+    np.savetxt('y_predict_wmse_trans.txt', y_predict.reshape((y_test.shape[1], y_test.shape[2])))
