@@ -44,10 +44,11 @@ def custom_objective1(y_true, y_pred):
     return T.mean(0.5*(weight_matrix)*(y_true-y_pred)**2)
 
 if __name__ == '__main__':
-    nb_classes = 1  # Output size
+    nb_classes = 8  # Output size
     nb_hidden = 100  # num hidden units
     helper = BetaStockHelper()
-    X_train ,y_train = helper.readAllData("I:\\BetaStock\\data\\")
+    X_train, y_train = helper.readAllData("./data/")
+    y_train = to_categorical(y_train)
     print y_train
     #y_train= to_categorical(y_train, nb_classes=8)
     data_dim = np.shape(X_train)[2]
@@ -55,32 +56,32 @@ if __name__ == '__main__':
 
     model = Sequential()
     model.add(LSTM(nb_hidden, input_dim=data_dim, return_sequences=True,
-                   W_regularizer=l2(0), b_regularizer=l2(0)))
-    model.add(Dropout(0.6))
+                   W_regularizer=l2(0.001), b_regularizer=l2(0.01)))
+    model.add(Dropout(0.7))
     model.add(LSTM(nb_hidden, input_dim=nb_hidden, return_sequences=True,
-                   W_regularizer=l2(0), b_regularizer=l2(0)))
-    model.add(Dropout(0.6))
+                   W_regularizer=l2(0.001), b_regularizer=l2(0.01)))
+    model.add(Dropout(0.7))
     model.add(TimeDistributedDense(nb_classes, input_dim=nb_hidden,
-                                   activation='linear', W_regularizer=l2(0),
-                                   b_regularizer=l2(0)))
+                                   activation='softmax', W_regularizer=l2(0.001),
+                                   b_regularizer=l2(0.01)))
 
-    model.compile(loss=custom_objective1, optimizer='rmsprop')
+    model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
 
     earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                  patience=10, verbose=0, mode='auto')
+                                                  patience=30, verbose=0, mode='auto')
 
-    model.fit(X_train, y_train, batch_size=300, nb_epoch=200,
+    model.fit(X_train, y_train, batch_size=100, nb_epoch=300,
               validation_split=0.3, callbacks=[earlyStopping],
               shuffle=True, show_accuracy=False)
     json_string = model.to_json()
-    file_to_save_model = open("ta_wmse_trans.model.json", "w")
+    file_to_save_model = open("ta_mulloss_trans.model.json", "w")
     file_to_save_model.write(json_string)
     file_to_save_model.close()
-    model.save_weights('ta_wmse_trans.model.weights.h5')
+    model.save_weights('ta_mulloss_trans.model.weights.h5')
 
-    X_test, y_test = helper.readSingleFromFile("I:\\BetaStock\\test\\sh.csv", mode=1)
-    #y_test = to_categorical(y_test, nb_classes=8)
+    X_test, y_test = helper.readSingleFromFile("./test/sh.csv", mode=1)
+    y_test = to_categorical(y_test, nb_classes=8)
     score = model.evaluate(X_test, y_test, batch_size=1, verbose=1)
     y_predict = model.predict(X_test,  batch_size=1)
-    np.savetxt('y_test_wmse_trans.txt', y_test.reshape((y_test.shape[1], y_test.shape[2])))
-    np.savetxt('y_predict_wmse_trans.txt', y_predict.reshape((y_test.shape[1], y_test.shape[2])))
+    np.savetxt('y_test_mulloss_trans.txt', y_test.reshape((y_test.shape[1], y_test.shape[2])))
+    np.savetxt('y_predict_mulloss_trans.txt', y_predict.reshape((y_test.shape[1], y_test.shape[2])))

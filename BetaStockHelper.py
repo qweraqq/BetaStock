@@ -50,27 +50,32 @@ def y_transform(y):
     :param y:
     :return:
     """
-    # if y<=-6:
-    #     r = 0
-    # elif y>-6 and y<=-3:
+    if y <= -6:
+        r = 0
+    elif y > -6 and y <= -3:
+        r = 1
+    elif y > -3 and y <= -1:
+        r = 2
+    elif y > -1 and y <= 0:
+        r = 3
+    elif y > 0 and y <= 1:
+        r = 4
+    elif y > 1 and y <= 3:
+         r = 5
+    elif y > 3 and y <= 6:
+        r = 6
+    else:
+        r = 7
+    # if y <= 0:
+    #     r = -1
+    # else:
     #     r = 1
-    # elif y>-3 and y<=-1:
-    #     r=2
-    # elif y>-1 and y<=0:
-    #     r=3
-    # elif y>0 and y<=1:
-    #     r=4
-    # elif y>1 and y<=3:
-    #     r=5
-    # elif y>3 and y<=6:
-    #     r=6
+    # r = y
+    # if y <= 0:
+    #     r = 0
     # else:
-    #     r=7
-    # if y<=0:
-    #     r=-1
-    # else:
-    #     r=1
-    return y
+    #     r = 1
+    return r
 
 def featureNormalization(X, mode=0):
     """
@@ -102,7 +107,7 @@ def featureNormalization(X, mode=0):
     # Now r_value is as described
     # Do your own normalization
     # r_value *= 10
-    r_value = np.sign(r_value)*np.log(1+np.abs(r_value*10))
+    r_value = np.sign(r_value)*np.log(1+np.abs(r_value*100))
     return r_value, r_y
 
 class BetaStockHelper(object):
@@ -131,12 +136,12 @@ class BetaStockHelper(object):
         if 'word_emb_file' in kwargs:
             self.word_emb_file = kwargs['word_emb_file']
         else:
-            self.word_emb_file = 'F:\\BetaStock\\data_preserved\\word.vectors.txt'
+            self.word_emb_file = './data_preserved/word.vectors.txt'
 
         if 'word_emb_vocab' in kwargs:
             self.word_emb_vocab = kwargs['word_emb_vocab']
         else:
-            self.word_emb_vocab = 'F:\\BetaStock\\data_preserved\\word.vocab.txt'
+            self.word_emb_vocab = './data_preserved/word.vocab.txt'
         # word embeddings, vocab
         self.W_norm, self.vocab, _ = \
             loadWordEmbeddings(self.word_emb_vocab,
@@ -146,7 +151,7 @@ class BetaStockHelper(object):
         if 'rae_param_dict' in kwargs:
             self.rae_param_dict = kwargs['rae_param_dict']
         else:
-            self.rae_param_dict = 'F:\\BetaStock\\data_preserved\\'
+            self.rae_param_dict = './data_preserved/'
 
         self.rae_W1, self.rae_W2, self.rae_b = \
             loadRaeParameters(self.rae_param_dict+'W1.txt',
