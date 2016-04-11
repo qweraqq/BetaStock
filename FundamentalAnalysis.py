@@ -28,7 +28,7 @@ def custom_objective(y_true, y_pred):
     # weight_matrix = T.exp(T.abs_(y_true-y_pred)/50)
     # T.abs_(y1-y)
     # (y1-y)**2
-    weight_matrix = T.log10(1+T.abs_(y_true/10))
+    weight_matrix = T.log10(1+T.abs_(y_true))
     return T.mean(0.5*weight_matrix*(y_true-y_pred)**2)
 
 

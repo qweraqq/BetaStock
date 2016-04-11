@@ -2,138 +2,88 @@
 from __future__ import division
 from keras.models import Sequential
 from keras.layers import LSTM, TimeDistributedDense, Dropout
-from keras.preprocessing import sequence
-
-
-import numpy as np
-import pandas as pd
+from keras.regularizers import l2
 import keras
-import os
+import theano.tensor as T
+from BetaStockHelper import *
+
+from theano import config
+from theano import function, printing
+# from keras.preprocessing import sequence
+# import numpy as np
+# import pandas as pd
+# config.exception_verbosity='high'
+# config.compute_test_value = 'warn'
 
 
-def readStockFile(filename, mode=0):
+def custom_objective(y_true, y_pred):
     """
-    :param filename: saved stock file, like '600000.csv'
-    :param mode: mode 0 - regular stocks
-                 mode 1 - index
-    :return: tuple (X ,y)
-             X = (1,nb_samples,nb_features) 3d tensor
-             y = (1,nb_samples,1) 3d tensor
-
-             here, nb_samples a.k.a timesteps
+    Custom objective function
+    :param y_true: real value
+    :param y_pred: predicted value
+    :return: cost
     """
-
-    if mode == 0:
-        df = pd.read_csv(filename, sep=',', header=0, usecols=[1, 2, 4, 7, 14])
-        X = np.array(df)
-        X[:, 4] = X[:, 4] / 100
-    if mode == 1:
-        df = pd.read_csv(filename, sep=',', header=0, usecols=[1, 2, 4, 5, 7])
-        X = np.array(df)
-        tmp = np.array(X[:, 3], copy=True)
-
-        X[:, 3] = np.copy(X[:, 4])
-        X[:, 4] = np.copy(tmp)
-        X[:, 4] = X[:, 4] * 100
-        X[:, 4] = X[:, 4] / 320000000000
-
-    X[:, 3] = X[:, 3]/100
-    last_day_close_rev = 1/(1+X[:, 3])
-    last_day_close_rev = last_day_close_rev.reshape((len(last_day_close_rev),1))
-    df = pd.read_csv(filename, sep=',', header=0, usecols=[3])
-    last_day_close = np.array(df) * last_day_close_rev
-
-    X[:, 0:3] = ((X[:, 0:3] - last_day_close) / last_day_close)
-    # X[:, 0:3] = X[:, 0:3] * 100
-    # X[:, 3] = X[:, 3]
-    X = featureNormalization(X)
-    nb_timesteps = np.shape(X)[0]
-    X = X[np.newaxis, nb_timesteps-1:1:-1, :]
-    df = pd.read_csv(filename, sep=',', header=0, usecols=[7])
-    Y = np.array(df)
-    y = []
-    for val in Y:
-        y.append(val)
-    y = np.asarray(y)
-    y = y[np.newaxis, nb_timesteps-2:0:-1, :]
-    return X, y
+    # weight_matrix = ((y1 * y)<0)
+    weight_matrix = 0.5*((y_true*y_pred) < 0)
+    # T.abs_(y1-y)
+    # (y1-y)**2
+    # (weight_matrix)
+    return T.mean(0.5*(1+weight_matrix)*(y_true-y_pred)**2)
 
 
-def featureNormalization(X, mode=0):
+def custom_objective1(y_true, y_pred):
     """
-    :param X: (nb_examples, nb_features) matrix
-              here, nb_samples a.k.a timesteps
-              X[: ,0] = (open-last_day_close)/last_day_close
-              X[: ,1] = (high-last_day_close)/last_day_close
-              X[: ,2] = (low-last_day_close)/last_day_close
-              X[: ,3] = (close-last_day_close)/last_day_close
-              X[: ,4] = turnover rate
-    :param mode: dummy now
-    :return: normalized X
+    Custom objective function
+    :param y_true: real value
+    :param y_pred: predicted value
+    :return: cost
     """
-
-    X[:, 0:5] = X[:, 0:5] * 10
-    return X
-
-
-def readAllData(dictname):
-    """
-    read all files in dictname
-    :param dictname: dictionary name
-    :return: tuple (X, y)
-             X = (nb_samples, timesteps, nb_features)
-             y = (nb_samples, timesteps, nb_labels)
-    """
-    X = None
-    y = None
-    file_list = os.listdir(dictname)
-    for idx, f in enumerate(file_list):
-        file_name = dictname+f
-        (X_tmp, y_tmp) = readStockFile(file_name)
-        X_tmp = sequence.pad_sequences(X_tmp, maxlen=280, dtype='float32')
-        y_tmp = sequence.pad_sequences(y_tmp, maxlen=280, dtype='float32')
-        if idx == 0:
-            X = X_tmp
-            y = y_tmp
-            continue
-        X = np.vstack((X, X_tmp))
-        y = np.vstack((y, y_tmp))
-
-    return X, y
+    # weight_matrix = ((y1 * y)<0)
+    weight_matrix = T.exp(T.abs_(y_true-y_pred)/10)
+    # T.abs_(y1-y)
+    # (y1-y)**2
+    # (weight_matrix)
+    return T.mean(0.5*weight_matrix*(y_true-y_pred)**2)
 
 if __name__ == '__main__':
-    # X, y = readStockFile('sh.csv', mode=1)
-    (X, y) = readAllData("./data/")
-    # print X
-    # X,y = readStockFile('sh.csv', mode=1)
-    data_dim = np.shape(X)[2]
-    timesteps = np.shape(X)[1]
-    nb_classes = 1
-    nb_hidden = 50
-    # expected input data shape: (batch_size, timesteps, data_dim)
+    nb_classes = 8  # Output size
+    nb_hidden = 100  # num hidden units
+    helper = BetaStockHelper()
+    X_train, y_train = helper.readAllData("./data/")
+    y_train = to_categorical(y_train)
+    print y_train
+    # y_train= to_categorical(y_train, nb_classes=8)
+    data_dim = np.shape(X_train)[2]
+    timesteps = np.shape(X_train)[1]
+
     model = Sequential()
-    # model.add(BatchNormalization(mode=1,input_shape=(timesteps,data_dim)))
-    model.add(LSTM(nb_hidden, input_dim=data_dim, return_sequences=True))  # returns a sequence of vectors of dimension 32
-    model.add(Dropout(0.2))
-    model.add(LSTM(nb_hidden, input_dim=nb_hidden, return_sequences=True))
-    model.add(Dropout(0.2))
-    model.add(TimeDistributedDense(nb_classes, input_dim=nb_hidden, activation='linear'))
+    model.add(LSTM(nb_hidden, input_dim=data_dim, return_sequences=True,
+                   W_regularizer=l2(0.001), b_regularizer=l2(0.01)))
+    model.add(Dropout(0.7))
+    model.add(LSTM(nb_hidden, input_dim=nb_hidden, return_sequences=True,
+                   W_regularizer=l2(0.001), b_regularizer=l2(0.01)))
+    model.add(Dropout(0.7))
+    model.add(TimeDistributedDense(nb_classes, input_dim=nb_hidden,
+                                   activation='softmax', W_regularizer=l2(0.001),
+                                   b_regularizer=l2(0.01)))
 
-    earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, verbose=0, mode='auto')
-    model.compile(loss='mean_squared_error', optimizer='rmsprop')  # rmsprop
-    model.fit(X, y, batch_size=500, nb_epoch=500, validation_split=0.2, callbacks=[earlyStopping], shuffle=True)
+    model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
 
-    (X_test, y_test) = readAllData("./test/")
-    score = model.evaluate(X_test, y_test, batch_size=1, verbose=1)
-    print score
-    y_predict = model.predict(X_test,  batch_size=1)
+    earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                  patience=30, verbose=0, mode='auto')
 
-    for i in range(np.shape(y_test)[1]):
-        if i > 200:
-            print y_test[0, i, 0], y_predict[0, i, 0]
-
+    model.fit(X_train, y_train, batch_size=100, nb_epoch=300,
+              validation_split=0.3, callbacks=[earlyStopping],
+              shuffle=True, show_accuracy=False)
     json_string = model.to_json()
-    file_to_save_model = open("ta.model.json", "w")
+    file_to_save_model = open("ta_mulloss_trans.model.json", "w")
     file_to_save_model.write(json_string)
     file_to_save_model.close()
-    model.save_weights('ta.model.weights.h5')
+    model.save_weights('ta_mulloss_trans.model.weights.h5')
+
+    X_test, y_test = helper.readSingleFromFile("./test/sh.csv", mode=1)
+    y_test = to_categorical(y_test, nb_classes=8)
+    score = model.evaluate(X_test, y_test, batch_size=1, verbose=1)
+    y_predict = model.predict(X_test,  batch_size=1)
+    np.savetxt('y_test_mulloss_trans.txt', y_test.reshape((y_test.shape[1], y_test.shape[2])))
+    np.savetxt('y_predict_mulloss_trans.txt', y_predict.reshape((y_test.shape[1], y_test.shape[2])))
