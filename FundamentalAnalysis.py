@@ -25,10 +25,10 @@ def custom_objective(y_true, y_pred):
     :return: cost
     """
     # weight_matrix = ((y1 * y)<0)
-    # weight_matrix = T.exp(T.abs_(y_true-y_pred)/50)
+    weight_matrix = T.exp(T.abs_(y_true-y_pred)/50)
     # T.abs_(y1-y)
     # (y1-y)**2
-    weight_matrix = T.abs_(y_true)
+    # weight_matrix = T.abs_(y_true)
     return T.mean(0.5*weight_matrix*(y_true-y_pred)**2)
 
 
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss',
                                                   patience=10, verbose=0, mode='auto')
     model.compile(loss=custom_objective, optimizer='rmsprop')
-    model.fit(X, y, batch_size=30, nb_epoch=3, validation_data=(X_test, y_test),
+    model.fit(X, y, batch_size=30, nb_epoch=4, validation_data=(X_test, y_test),
               shuffle=True, callbacks=[earlyStopping])
 
     json_string = model.to_json()
